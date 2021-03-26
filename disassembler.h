@@ -15,39 +15,40 @@ public:
 
     
     void ReadFiles(char* objFile);
-    void PrintText();
     void Parser();
-    void TextParser(string line);
     
-    pair<string, string> GetAddressingMode(string flagBits);
-    pair<string, unsigned int> CalculateTargetAddress(int flagBits, unsigned int dispOrAddr);
 
 private:
     void HeaderParser(string line);
+    void TextParser(string line);
     void EndParser(string line);
+
     pair<string, int> GetMnemonic(string binary);
+    pair<string, unsigned int> CalculateTargetAddress(const int flagBits, unsigned int dispOrAddr);
 
-    void CheckMemoryGap(int rangeLower, int rangeUpper);
-
+    void MemoryAssignment(int rangeLower, int rangeUpper);
     void UpdateRegisters(string mnemonic, unsigned int value);
+
     long HexToDecimal(string hex);
     string HexToBinary(string hex);
     string BinaryToHex(string binary);
-    void WriteToLst(int address, string name, string mnemonic, string srcName, string opcode);
-    void WriteToLst(string mnemonic, string srcName);
+    
+    void WriteToLst(int address, string subroutineName, string mnemonic, string forwardRef, string opcode);
+    void WriteToLst(string mnemonic, string forwardRef);
 
+private:
     vector<string> objLines;
     vector<string> symLines;
 
 
     bool baseRegisterActive = false;
     bool XRegisterFlag = false;
-    unsigned int baseRegister = 0;
-    unsigned int PCRegister = 0;
-    unsigned int XRegister = 0;
-    unsigned int ARegister = 0;
+    unsigned int baseRegister;
+    unsigned int PCRegister;
+    unsigned int XRegister;
+    unsigned int ARegister;
 
-    int mostRecentMemoryAddress;
+    unsigned int mostRecentMemoryAddress;
     
     const string registerTable = "AXLBSTF";
 
