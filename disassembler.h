@@ -46,7 +46,7 @@ private:
     void UpdateRegisters(std::ofstream &outFile, std::string mnemonic, unsigned int value);
 
     long HexString2Decimal(std::string hex);
-    std::string HexToBinary(std::string hex);
+    std::string HexString2BinaryString(std::string hex);
     std::string BinaryToHex(std::string binary);
     
     void WriteToLst(std::ofstream &outFile, int address, std::string subroutineName, std::string mnemonic, std::string forwardRef, std::string opcode);

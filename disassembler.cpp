@@ -185,7 +185,7 @@ void DisAssembler::TextParser(string line, ofstream &outFile)
             MemoryAssignment(outFile, mostRecentMemoryAddress, currentMemoryAddress);
        
         string subroutineName = (symbolTable.find(currentMemoryAddress) != symbolTable.end()) ? symbolTable.at(currentMemoryAddress).first : "";
-        string firstBits = HexToBinary(line.substr(i, 3)); 
+        string firstBits = HexString2BinaryString(line.substr(i, 3)); 
         string mnemonic = GetMnemonic(firstBits.substr(0, 6)).first;
 
         // Check if format is 2, if it is grab the remaining two bits and write to file
@@ -379,7 +379,7 @@ long DisAssembler::HexString2Decimal(string hex)
     @param hexadecimal number to convert.
     @return the hexadecimal number converted to binary
 */
-string DisAssembler::HexToBinary(string hex)
+string DisAssembler::HexString2BinaryString(string hex)
 {
     string binary = "";
     for (const auto& character : hex)
