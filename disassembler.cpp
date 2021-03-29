@@ -186,14 +186,14 @@ void DisAssembler::TextParser(string line, ofstream &outFile)
        
         string subroutineName = (symbolTable.find(currentMemoryAddress) != symbolTable.end()) ? symbolTable.at(currentMemoryAddress).first : "";
         string firstBits = HexString2BinaryString(line.substr(i, 3)); 
-        cout << "debug : i = "  << i << endl;
-        cout << "debug : subroutineName= "  << subroutineName << endl;
-        cout << "debug : line= "  << line.substr(i, 3)<< endl;
-        cout << "debug : firstBits= "  << firstBits << endl;
+        // cout << "debug : i = "  << i << endl;
+        // cout << "debug : subroutineName= "  << subroutineName << endl;
+        // cout << "debug : line= "  << line.substr(i, 3)<< endl;
+        // cout << "debug : firstBits= "  << firstBits << endl;
         string opcode = firstBits.substr(0, 6);
-        cout << "debug : opcode= "  << opcode << endl;
+        // cout << "debug : opcode= "  << opcode << endl;
         string mnemonic = GetMnemonic(opcode).first;
-        cout << "debug : mnemonic= "  << mnemonic << endl;
+        // cout << "debug : mnemonic= "  << mnemonic << endl;
         // Check if format is 2, if it is grab the remaining two bits and write to file
         if (GetMnemonic(opcode).second == 2)
         {
@@ -205,10 +205,10 @@ void DisAssembler::TextParser(string line, ofstream &outFile)
         else // Its format 3 or 4, continue accordingly
         {
             const int nixbpe = stoi(firstBits.substr(6, 6));
-            cout << "nixbpe: " << firstBits.substr(6, 6) << endl;
+            // cout << "nixbpe: " << firstBits.substr(6, 6) << endl;
         
             string instructionFormat = CalculateTargetAddress(nixbpe, 0).first;
-            cout << "instructionFormat: " << instructionFormat << endl;
+            // cout << "instructionFormat: " << instructionFormat << endl;
 
             // If format contains a '+' sign, set format to 4. Otherwise grab from opcodeTable via function
             format = instructionFormat.find('+') != string::npos ? 4 : GetMnemonic(firstBits.substr(0, 6)).second;
@@ -222,27 +222,30 @@ void DisAssembler::TextParser(string line, ofstream &outFile)
             dispOrAddr = ((format == 3 && 0x800 & dispOrAddr) ? (int)(0x7FF & dispOrAddr) - 0x800 : dispOrAddr);
             unsigned int targetAddress = CalculateTargetAddress(nixbpe, dispOrAddr).second;
             string operand = (symbolTable.find(targetAddress)) != symbolTable.end() ? symbolTable.at(targetAddress).first : "";
-            cout << "operand= " <<  operand << endl;
+            // cout << "operand= " <<  operand << endl;
             string opCode = line.substr(i, format * 2);
 
             if (subroutineName.find(opCode) != string::npos)
             {
-                cout << "debugk" << endl;
+                // cout << "debugk" << endl;
                 WriteToLst(outFile, "LTORG", "");
                 mnemonic = "*";
                 WriteToLst(outFile, currentMemoryAddress, "", "*", subroutineName, opCode);
             } else if (instructionFormat.length() == 0) {
-                WriteToLst(outFile, currentMemoryAddress, "", mnemonic, operand, opCode);
+                WriteToLst(outFile, "LTORG", "");
+                WriteToLst(outFile, currentMemoryAddress, "", "*", subroutineName, opCode.substr(0,2));
+                format = 1;
             }
-            else {
-                cout << instructionFormat << endl;
+
+            else
+            {
                 string srcStatement = instructionFormat.replace(instructionFormat.find("op"), 2, mnemonic);
                 if (instructionFormat.find('m') != string::npos)
                     srcStatement = instructionFormat.replace(instructionFormat.find("m"), 1, operand);
  
                 else if (instructionFormat.find('c') != string::npos)
                     srcStatement = instructionFormat.replace(instructionFormat.find("c"), 1, opCode.substr(5));
-
+ 
                 WriteToLst(outFile, currentMemoryAddress,
                     subroutineName, srcStatement.substr(0, srcStatement.find(" ")),
                     srcStatement.substr(srcStatement.find(" ")),
@@ -308,6 +311,8 @@ pair<string, unsigned int> DisAssembler::CalculateTargetAddress(const int flagBi
             return { "+op m,X", dispOrAddr + XRegister };
         case 111010:
             return { "op m,X", PCRegister + dispOrAddr + XRegister };
+        case 111100:
+            return { "op m,X", baseRegister + dispOrAddr + XRegister };
         case 100000:
             return { "op @c", dispOrAddr };
         case 100001:
