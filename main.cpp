@@ -33,7 +33,7 @@ int main(int argc, char** argv)
     // Testing areas:
     // print_objLines(dasm->objLines);
     // print_symbolTab(dasm->symbolTable);
-    compare2Files("answer.lst", "out.lst");
+    // compare2Files("answer.lst", "out.lst");
 
     return 0;
 }

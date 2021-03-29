@@ -186,10 +186,16 @@ void DisAssembler::TextParser(string line, ofstream &outFile)
        
         string subroutineName = (symbolTable.find(currentMemoryAddress) != symbolTable.end()) ? symbolTable.at(currentMemoryAddress).first : "";
         string firstBits = HexString2BinaryString(line.substr(i, 3)); 
-        string mnemonic = GetMnemonic(firstBits.substr(0, 6)).first;
-
+        cout << "debug : i = "  << i << endl;
+        cout << "debug : subroutineName= "  << subroutineName << endl;
+        cout << "debug : line= "  << line.substr(i, 3)<< endl;
+        cout << "debug : firstBits= "  << firstBits << endl;
+        string opcode = firstBits.substr(0, 6);
+        cout << "debug : opcode= "  << opcode << endl;
+        string mnemonic = GetMnemonic(opcode).first;
+        cout << "debug : mnemonic= "  << mnemonic << endl;
         // Check if format is 2, if it is grab the remaining two bits and write to file
-        if (GetMnemonic(firstBits.substr(0, 6)).second == 2)
+        if (GetMnemonic(opcode).second == 2)
         {
             format = 2;
             string objectCode = line.substr(i, format * 2);
@@ -199,8 +205,11 @@ void DisAssembler::TextParser(string line, ofstream &outFile)
         else // Its format 3 or 4, continue accordingly
         {
             const int nixbpe = stoi(firstBits.substr(6, 6));
+            cout << "nixbpe: " << firstBits.substr(6, 6) << endl;
+        
             string instructionFormat = CalculateTargetAddress(nixbpe, 0).first;
-            
+            cout << "instructionFormat: " << instructionFormat << endl;
+
             // If format contains a '+' sign, set format to 4. Otherwise grab from opcodeTable via function
             format = instructionFormat.find('+') != string::npos ? 4 : GetMnemonic(firstBits.substr(0, 6)).second;
             PCRegister = currentMemoryAddress + format;
@@ -212,30 +221,34 @@ void DisAssembler::TextParser(string line, ofstream &outFile)
             // If displacement is format 3 and in 2's complement, convert to its signed value (for TA calculation)
             dispOrAddr = ((format == 3 && 0x800 & dispOrAddr) ? (int)(0x7FF & dispOrAddr) - 0x800 : dispOrAddr);
             unsigned int targetAddress = CalculateTargetAddress(nixbpe, dispOrAddr).second;
-
             string operand = (symbolTable.find(targetAddress)) != symbolTable.end() ? symbolTable.at(targetAddress).first : "";
+            cout << "operand= " <<  operand << endl;
             string opCode = line.substr(i, format * 2);
 
             if (subroutineName.find(opCode) != string::npos)
             {
+                cout << "debugk" << endl;
                 WriteToLst(outFile, "LTORG", "");
                 mnemonic = "*";
                 WriteToLst(outFile, currentMemoryAddress, "", "*", subroutineName, opCode);
-            } 
-            else
-            {
+            } else if (instructionFormat.length() == 0) {
+                WriteToLst(outFile, currentMemoryAddress, "", mnemonic, operand, opCode);
+            }
+            else {
+                cout << instructionFormat << endl;
                 string srcStatement = instructionFormat.replace(instructionFormat.find("op"), 2, mnemonic);
                 if (instructionFormat.find('m') != string::npos)
                     srcStatement = instructionFormat.replace(instructionFormat.find("m"), 1, operand);
  
                 else if (instructionFormat.find('c') != string::npos)
                     srcStatement = instructionFormat.replace(instructionFormat.find("c"), 1, opCode.substr(5));
- 
+
                 WriteToLst(outFile, currentMemoryAddress,
                     subroutineName, srcStatement.substr(0, srcStatement.find(" ")),
                     srcStatement.substr(srcStatement.find(" ")),
                     opCode);
             }
+            
             UpdateRegisters(outFile, mnemonic, dispOrAddr);
         }
         currentMemoryAddress += format;
@@ -436,8 +449,15 @@ void DisAssembler::WriteToLst(ofstream &outFile, int address, string subroutineN
         forwardRefLen++;
         mnemonicLen--;
     }
-    // cout << "subroutineNameLen: " << subroutineNameLen << endl;
-    // cout << "mnemonicLen: " << mnemonicLen << endl;
+
+    // cout << uppercase << hex << right << setfill('0') << setw(4) << address << left
+    //      << setfill(' ') << setw(4) << " " 
+    //      << setfill(' ') << setw(subroutineNameLen) << left << subroutineName
+    //      << setfill(' ') << setw(mnemonicLen) << mnemonic
+    //      << setfill(' ') << setw(forwardRefLen) << forwardRef
+    //      << objectCode
+    //      << endl;
+
     outFile << uppercase << hex << right << setfill('0') << setw(4) << address << left
          << setfill(' ') << setw(4) << " " 
          << setfill(' ') << setw(subroutineNameLen) << left << subroutineName
@@ -455,6 +475,10 @@ void DisAssembler::WriteToLst(ofstream &outFile, string mnemonic, string forward
     forwardRef =  (start == std::string::npos) ? "" : forwardRef.substr(start);
     // regex r("^\\s+");
     // forwardRef = regex_replace(forwardRef, r, "");
+    // cout << setfill(' ') << setw(18) << " "  
+    //         << left << setw(8) << mnemonic 
+    //         << setw(16) << forwardRef << endl;
+
     outFile << setfill(' ') << setw(18) << " "  
             << left << setw(8) << mnemonic 
             << setw(16) << forwardRef << endl;
