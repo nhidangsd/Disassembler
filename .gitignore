@@ -1,0 +1,5 @@
+*.lst
+*.txt
+*.o
+.dist
+.vscode
