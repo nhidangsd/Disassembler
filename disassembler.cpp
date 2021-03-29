@@ -174,9 +174,10 @@ void DisAssembler::TextParser(string line, ofstream &outFile)
     unsigned int currentMemoryAddress = stoi(line.substr(2, 4), nullptr, 16);
 
     // Col 6-8 is the length of object code in bytes (hexidecimal)
-    long recordLength = HexToDecimal(line.substr(6, 2));
+    long recordLength = HexString2Decimal(line.substr(6, 2));
     int format;
     
+
     // Start processing the object code
     for (int i = 8; i < recordLength * 2 + 8; )
     {
@@ -240,6 +241,7 @@ void DisAssembler::TextParser(string line, ofstream &outFile)
         currentMemoryAddress += format;
         mostRecentMemoryAddress = currentMemoryAddress;
         i += format * 2;
+
     }
 }
 
@@ -366,7 +368,7 @@ void DisAssembler::UpdateRegisters(ofstream &outFile, string mnemonic, unsigned 
     @param hexadecimal number to convert.
     @return the hexadecimal number converted to decimal
 */
-long DisAssembler::HexToDecimal(string hex)
+long DisAssembler::HexString2Decimal(string hex)
 {
     return stol(hex, nullptr, 16);
 }

@@ -30,6 +30,8 @@ public:
     */
     void ReadinSymbolTable(char* fileName);
     void Parser();
+    std::vector<std::string> objLines;
+    std::map < unsigned int, std::pair<std::string, std::string> > symbolTable;
     
 
 private:
@@ -43,7 +45,7 @@ private:
     void MemoryAssignment(std::ofstream &outFile, int rangeLower, int rangeUpper);
     void UpdateRegisters(std::ofstream &outFile, std::string mnemonic, unsigned int value);
 
-    long HexToDecimal(std::string hex);
+    long HexString2Decimal(std::string hex);
     std::string HexToBinary(std::string hex);
     std::string BinaryToHex(std::string binary);
     
@@ -51,8 +53,8 @@ private:
     void WriteToLst(std::ofstream &outFile, std::string mnemonic, std::string forwardRef);
 
 private:
-    std::vector<std::string> objLines;
-    std::map < unsigned int, std::pair<std::string, std::string> > symbolTable;
+    // std::vector<std::string> objLines;
+    // std::map < unsigned int, std::pair<std::string, std::string> > symbolTable;
 
 
     bool baseRegisterActive = false;

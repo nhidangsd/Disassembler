@@ -9,7 +9,7 @@
 #include <iomanip>
 #include "disassembler.h"
 
-// #include "test.h"
+#include "test.h"
 using namespace std;
 
 int main(int argc, char** argv) 
@@ -28,9 +28,12 @@ int main(int argc, char** argv)
     // Init value for DisAssembler 's symbol table
     dasm->ReadinSymbolTable(argv[2]);
 
-    // print_symbolTab(dasm->symbolTable);
-
     dasm->Parser();
+
+    // Testing areas:
+    // print_objLines(dasm->objLines);
+    // print_symbolTab(dasm->symbolTable);
+    compare2Files("answer.lst", "out.lst");
 
     return 0;
 }
