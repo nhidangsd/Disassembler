@@ -72,11 +72,12 @@ void compare2Files(string fileNameA, string fileNameB){
         size_t end = lineB.find_last_not_of(WHITESPACE);
         lineB = (end == std::string::npos) ? "" : lineB.substr(0, end + 1);
 
-        if (lineA.compare(lineA) || ( lineA.length() != lineB.length() ))
+        if (lineA.compare(lineB) != 0 || ( lineA.length() != lineB.length() ))
         {
+            cout << "TEST FAILED: compare2Files" << endl;
             cout << "line A length = " << lineA.length() <<  ": " << lineA << endl;
             cout << "line B length = " << lineB.length() <<  ": " << lineB << endl;
-            break;
+            return;
         }
         
     }

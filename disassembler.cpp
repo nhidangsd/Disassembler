@@ -192,16 +192,16 @@ void DisAssembler::TextParser(string line, ofstream &outFile)
         if (GetMnemonic(firstBits.substr(0, 6)).second == 2)
         {
             format = 2;
-            string opCode = line.substr(i, format * 2);
-            int regIdx = (int)opCode.at(2) - 48;
-            WriteToLst(outFile, currentMemoryAddress, subroutineName, mnemonic, registerTable.substr(regIdx, 1), opCode);
+            string objectCode = line.substr(i, format * 2);
+            int regIdx = (int)objectCode.at(2) - 48;
+            WriteToLst(outFile, currentMemoryAddress, subroutineName, mnemonic, registerTable.substr(regIdx, 1), objectCode);
         }
         else // Its format 3 or 4, continue accordingly
         {
             const int nixbpe = stoi(firstBits.substr(6, 6));
             string instructionFormat = CalculateTargetAddress(nixbpe, 0).first;
             
-            // If format contains a '+' sign, set format to 4. Otherwise grab from opCodeTable via function
+            // If format contains a '+' sign, set format to 4. Otherwise grab from opcodeTable via function
             format = instructionFormat.find('+') != string::npos ? 4 : GetMnemonic(firstBits.substr(0, 6)).second;
             PCRegister = currentMemoryAddress + format;
 
@@ -266,9 +266,9 @@ void DisAssembler::EndParser(string line, ofstream &outFile)
 */
 pair<string, int> DisAssembler::GetMnemonic(string binary)
 {
-    binary += "00";
+    binary.append("00");
     string opCode = BinaryToHex(binary);
-    return { opCodeTable.at(opCode).first, opCodeTable.at(opCode).second };
+    return { opcodeTable.at(opCode).first, opcodeTable.at(opCode).second };
 }
 
 
@@ -290,11 +290,11 @@ pair<string, unsigned int> DisAssembler::CalculateTargetAddress(const int flagBi
         case 110100:
             return { "op m", baseRegister + dispOrAddr };
         case 111000:
-            return { "op c, X", dispOrAddr + XRegister };
+            return { "op c,X", dispOrAddr + XRegister };
         case 111001:
-            return { "+op m, X", dispOrAddr + XRegister };
+            return { "+op m,X", dispOrAddr + XRegister };
         case 111010:
-            return { "op m, X", PCRegister + dispOrAddr + XRegister };
+            return { "op m,X", PCRegister + dispOrAddr + XRegister };
         case 100000:
             return { "op @c", dispOrAddr };
         case 100001:
@@ -385,7 +385,7 @@ string DisAssembler::HexString2BinaryString(string hex)
     for (const auto& character : hex)
     {
         int index = hexDigits.find(character);
-        binary += binaryNums[index];
+        binary.append(binaryNums[index]);
     }
     return binary;
 }
@@ -408,7 +408,7 @@ string DisAssembler::BinaryToHex(string binary)
 }
 
 
-void DisAssembler::WriteToLst(ofstream &outFile, int address, string subroutineName, string mnemonic, string forwardRef, string opcode)
+void DisAssembler::WriteToLst(ofstream &outFile, int address, string subroutineName, string mnemonic, string forwardRef, string objectCode)
 {
     const std::string WHITESPACE = " \n\r\t\f\v";
     size_t start = forwardRef.find_first_not_of(WHITESPACE);
@@ -443,7 +443,7 @@ void DisAssembler::WriteToLst(ofstream &outFile, int address, string subroutineN
          << setfill(' ') << setw(subroutineNameLen) << left << subroutineName
          << setfill(' ') << setw(mnemonicLen) << mnemonic
          << setfill(' ') << setw(forwardRefLen) << forwardRef
-         << opcode
+         << objectCode
          << endl;
 }
 

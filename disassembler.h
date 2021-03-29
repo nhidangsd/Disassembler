@@ -49,7 +49,7 @@ private:
     std::string HexString2BinaryString(std::string hex);
     std::string BinaryToHex(std::string binary);
     
-    void WriteToLst(std::ofstream &outFile, int address, std::string subroutineName, std::string mnemonic, std::string forwardRef, std::string opcode);
+    void WriteToLst(std::ofstream &outFile, int address, std::string subroutineName, std::string mnemonic, std::string forwardRef, std::string objectCode);
     void WriteToLst(std::ofstream &outFile, std::string mnemonic, std::string forwardRef);
 
 private:
@@ -68,7 +68,7 @@ private:
     
     const std::string registerTable = "AXLBSTF";
 
-    std::map <std::string, std::pair<std::string, int> > opCodeTable = {
+    std::map <std::string, std::pair<std::string, int> > opcodeTable = {
         {"18", {"ADD", 3}},  {"58", {"ADDF", 3}},   {"90", {"ADDR", 2}},   {"40", {"AND", 3}},  {"B4", {"CLEAR", 2}},
         {"28", {"COMP", 3}}, {"88", {"COMPF", 3}},  {"A0", {"COMPR", 2}},  {"24", {"DIV", 3}},  {"64", {"DIVF", 3}},
         {"9C", {"DIVR", 2}}, {"C4", {"FIX", 1}},    {"C0", {"FLOAT", 1}},  {"F4", {"HIO", 1}},  {"3C", {"J", 3}},
@@ -89,9 +89,9 @@ private:
         {"110001", { "+op m", "addr" }},
         {"110010", { "op m", "(PC) + disp" }},
         {"110100", { "op m", "(B) + disp" }},
-        {"111000", { "op c, X", "disp + (X)" }},
-        {"111001", { "+op m, X", "addr + (X)" }},
-        {"110010", { "op m, X", "(PC) + disp + (X)" }},
+        {"111000", { "op c,   X", "disp + (X)" }},
+        {"111001", { "+op m,       X", "addr + (X)" }},
+        {"110010", { "op m,     X", "(PC) + disp + (X)" }},
         {"100000", { "op @c", "disp" }},
         {"100001", { "+op @m", "addr" }},
         {"100010", { "op @m", "(PC) + disp" }},
@@ -99,7 +99,7 @@ private:
         {"010000", { "op #c", "disp" }},
         {"010001", { "+op #m", "addr" }},
         {"010010", { "op #m", "(PC) + disp" }},
-        {"010100", { "op #m", "(B) + disp" }}
+        {"010100", { "op #m", "(B) + disp" }},
     };
     
 
