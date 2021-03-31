@@ -56,13 +56,14 @@ private:
     // std::vector<std::string> objLines;
     // std::map < unsigned int, std::pair<std::string, std::string> > symbolTable;
 
-
+    unsigned int fullRecordLength;
     bool baseRegisterActive = false;
     bool XRegisterFlag = false;
     unsigned int baseRegister;
     unsigned int PCRegister;
     unsigned int XRegister;
     unsigned int ARegister;
+    unsigned int counter = 0;
 
     unsigned int mostRecentMemoryAddress;
     

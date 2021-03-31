@@ -121,7 +121,6 @@ void DisAssembler::Parser()
         cout << "Unable to open file" << endl;
         return;
     }
-
     for (const string& line : objLines)
     {
         char firstChar = *line.c_str();
@@ -139,6 +138,7 @@ void DisAssembler::Parser()
             default:
                 break;
         }
+        counter++;
     }
 
     outFile.close();
@@ -156,6 +156,7 @@ void DisAssembler::HeaderParser(string line, ofstream &outFile)
     int idx = std::distance(line.begin(), std::find_if(line.begin(), line.end(), [](const char c) { return std::isdigit(c); }));
     string headerName = line.substr(0, idx);
     int startingAddress = stoi(line.substr(6, 6), nullptr, 16);
+    fullRecordLength = stoi(line.substr(12, 6), nullptr, 16);
     WriteToLst(outFile, startingAddress, headerName, "", "START   0", "");
 }
 
@@ -183,7 +184,8 @@ void DisAssembler::TextParser(string line, ofstream &outFile)
     {
         if (currentMemoryAddress - mostRecentMemoryAddress > 4)
             MemoryAssignment(outFile, mostRecentMemoryAddress, currentMemoryAddress);
-       
+
+
         string subroutineName = (symbolTable.find(currentMemoryAddress) != symbolTable.end()) ? symbolTable.at(currentMemoryAddress).first : "";
         string firstBits = HexString2BinaryString(line.substr(i, 3)); 
         // cout << "debug : i = "  << i << endl;
@@ -257,6 +259,16 @@ void DisAssembler::TextParser(string line, ofstream &outFile)
         currentMemoryAddress += format;
         mostRecentMemoryAddress = currentMemoryAddress;
         i += format * 2;
+
+
+        if (i >= recordLength * 2 + 8 && objLines.at(counter + 1).at(0) != 'T')
+        {
+            if (fullRecordLength - currentMemoryAddress > format)
+            {
+                MemoryAssignment(outFile, mostRecentMemoryAddress - format, fullRecordLength);
+            }
+
+        }
     }
 }
 
@@ -268,7 +280,6 @@ void DisAssembler::TextParser(string line, ofstream &outFile)
 */
 void DisAssembler::EndParser(string line, ofstream &outFile)
 {
-
     int endingAddress = stoi(line, nullptr, 16);
     WriteToLst(outFile, "END", symbolTable.at(endingAddress).first);
 }
@@ -346,7 +357,9 @@ void DisAssembler::MemoryAssignment(ofstream &outFile, int rangeLower, int range
     for (const auto& key : symbolTable)
     {
         if (key.first >= rangeLower && key.first <= rangeUpper)
+        {
             addressRanges.push_back(key.first);     
+        }
     }
 
     for (int i = 0; i < addressRanges.size() - 1; i++)
@@ -454,13 +467,13 @@ void DisAssembler::WriteToLst(ofstream &outFile, int address, string subroutineN
         mnemonicLen--;
     }
 
-    // cout << uppercase << hex << right << setfill('0') << setw(4) << address << left
-    //      << setfill(' ') << setw(4) << " " 
-    //      << setfill(' ') << setw(subroutineNameLen) << left << subroutineName
-    //      << setfill(' ') << setw(mnemonicLen) << mnemonic
-    //      << setfill(' ') << setw(forwardRefLen) << forwardRef
-    //      << objectCode
-    //      << endl;
+     cout << uppercase << hex << right << setfill('0') << setw(4) << address << left
+          << setfill(' ') << setw(4) << " " 
+          << setfill(' ') << setw(subroutineNameLen) << left << subroutineName
+          << setfill(' ') << setw(mnemonicLen) << mnemonic
+          << setfill(' ') << setw(forwardRefLen) << forwardRef
+          << objectCode
+          << endl;
 
     outFile << uppercase << hex << right << setfill('0') << setw(4) << address << left
          << setfill(' ') << setw(4) << " " 
