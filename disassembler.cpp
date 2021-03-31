@@ -1,9 +1,5 @@
 #include "disassembler.h"
-#include <iostream>
-#include <fstream>
-#include <sstream>
-#include <iomanip>
-
+#include <algorithm>
 
 using namespace std;
 
@@ -21,17 +17,16 @@ DisAssembler::~DisAssembler()
 
 
 /**
-    Reads the input files into their proper data structures for later use
+    Reads the object code file into vector objLines for processing
     @param  char ptr representing the commanline arguments
-    @return 
+    @return void
 */
-void DisAssembler::ReadFiles(char* objFile)
+void DisAssembler::ReadinObjectCode(char* fileName)
 {
     fstream objStream;
-    fstream symStream;
     string line;
 
-    objStream.open(objFile);
+    objStream.open(fileName);
     if (!objStream.is_open()) {
         cout << "'.obj' file not found." << endl;
         exit(EXIT_FAILURE);
@@ -43,20 +38,72 @@ void DisAssembler::ReadFiles(char* objFile)
         }
     }
 
-    string symFile = objFile;
-    symFile.erase(symFile.find_last_of('.'));
-    symFile.append(".sym");
-    symStream.open(symFile.c_str());
-    if (!symStream.is_open()) {
-        cout << "'.sym' file not found." << endl;
-        exit(EXIT_FAILURE);
-    }
-    else
+}
+
+
+/**
+    Reads the symbol table file into a map symbolTable for look up data
+    @param  char ptr representing the commanline arguments
+    @return void
+*/
+void DisAssembler::ReadinSymbolTable(char* fileName)
+{
+    string line;
+    ifstream inFile (fileName); // Open the file for output operations (reading)
+    
+    if(inFile.is_open())
     {
-        while (getline(symStream, line)) {
-            symLines.push_back(line);
+        
+        // Read the first table in Symbol Table
+        // ignore first 2 lines
+        for(int i = 0; i < 2; i++){
+            getline(inFile, line);
         }
+        while ( getline(inFile, line) && line.length() != 0)
+        {
+            // Split a line into words by space
+            vector<string> tokens;
+            istringstream iss(line);
+
+            for(std::string s; iss >> s; ) {
+                tokens.push_back(s);
+            }
+  
+            pair<string, string> value (tokens.at(0), tokens.at(2)); 
+            unsigned int key = stoi(tokens.at(1), nullptr, 16);
+ 
+            symbolTable.insert( make_pair(key, value));
+        }
+       
+
+
+        // Read the second table in Symbol Table
+
+        // ignore first 2 lines
+        for(int i = 0; i < 2; i++){
+            getline(inFile, line);
+        }
+        while ( getline(inFile, line))
+        {
+            // Split a line into words by space
+            vector<string> tokens;
+            istringstream iss(line);
+
+            for(std::string s; iss >> s; ) {
+                tokens.push_back(s); 
+            }
+
+            pair<string, string> value (tokens.at(0), tokens.at(1)); 
+            unsigned int key = stoi(tokens.at(2), nullptr, 16);
+ 
+            symbolTable.insert( make_pair(key, value));
+        }
+
+
+        inFile.close();
     }
+    else cout << "Unable to open file";
+
 }
 
 
@@ -67,24 +114,34 @@ void DisAssembler::ReadFiles(char* objFile)
 */
 void DisAssembler::Parser()
 {
+    ofstream outFile ("out.lst");
+
+    if(!outFile.is_open())
+    {
+        cout << "Unable to open file" << endl;
+        return;
+    }
+
     for (const string& line : objLines)
     {
         char firstChar = *line.c_str();
         switch (firstChar)
         {
             case 'H':
-                HeaderParser(line.substr(1));
+                HeaderParser(line.substr(1), outFile);
                 break;
             case 'T':
-                TextParser(line.substr(1));
+                TextParser(line.substr(1), outFile);
                 break;
             case 'E':
-                EndParser(line.substr(1));
+                EndParser(line.substr(1), outFile);
                 break;
             default:
                 break;
         }
     }
+
+    outFile.close();
 }
 
 
@@ -93,13 +150,13 @@ void DisAssembler::Parser()
     @param  string representing the header record line
     @return
 */
-void DisAssembler::HeaderParser(string line)
+void DisAssembler::HeaderParser(string line, ofstream &outFile)
 {
     // Find the index of the first number, that is where the header name ends
     int idx = std::distance(line.begin(), std::find_if(line.begin(), line.end(), [](const char c) { return std::isdigit(c); }));
     string headerName = line.substr(0, idx);
-    int startingAddress = stoi(line.substr(9, 4), nullptr, 16);
-    WriteToLst(startingAddress, headerName, "", "START  0", "");
+    int startingAddress = stoi(line.substr(6, 6), nullptr, 16);
+    WriteToLst(outFile, startingAddress, headerName, "", "START   0", "");
 }
 
 
@@ -109,35 +166,51 @@ void DisAssembler::HeaderParser(string line)
     @param  string representing the text record line
     @return
 */
-void DisAssembler::TextParser(string line)
+void DisAssembler::TextParser(string line, ofstream &outFile)
 {
+
+    // Col 0-6 is the STARTING ADDRESS for object code (hexidecimal)
+    // we only need the last 4 digits in the 6digits starting addr
     unsigned int currentMemoryAddress = stoi(line.substr(2, 4), nullptr, 16);
-    long recordLength = HexToDecimal(line.substr(6, 2));
+
+    // Col 6-8 is the length of object code in bytes (hexidecimal)
+    long recordLength = HexString2Decimal(line.substr(6, 2));
     int format;
     
+
+    // Start processing the object code
     for (int i = 8; i < recordLength * 2 + 8; )
     {
         if (currentMemoryAddress - mostRecentMemoryAddress > 4)
-            MemoryAssignment(mostRecentMemoryAddress, currentMemoryAddress);
+            MemoryAssignment(outFile, mostRecentMemoryAddress, currentMemoryAddress);
        
         string subroutineName = (symbolTable.find(currentMemoryAddress) != symbolTable.end()) ? symbolTable.at(currentMemoryAddress).first : "";
-        string firstBits = HexToBinary(line.substr(i, 3)); 
-        string mnemonic = GetMnemonic(firstBits.substr(0, 6)).first;
-
+        string firstBits = HexString2BinaryString(line.substr(i, 3)); 
+        // cout << "debug : i = "  << i << endl;
+        // cout << "debug : subroutineName= "  << subroutineName << endl;
+        // cout << "debug : line= "  << line.substr(i, 3)<< endl;
+        // cout << "debug : firstBits= "  << firstBits << endl;
+        string opcode = firstBits.substr(0, 6);
+        // cout << "debug : opcode= "  << opcode << endl;
+        string mnemonic = GetMnemonic(opcode).first;
+        // cout << "debug : mnemonic= "  << mnemonic << endl;
         // Check if format is 2, if it is grab the remaining two bits and write to file
-        if (GetMnemonic(firstBits.substr(0, 6)).second == 2)
+        if (GetMnemonic(opcode).second == 2)
         {
             format = 2;
-            string opCode = line.substr(i, format * 2);
-            int regIdx = (int)opCode.at(2) - 48;
-            WriteToLst(currentMemoryAddress, subroutineName, mnemonic, registerTable.substr(regIdx, 1), opCode);
+            string objectCode = line.substr(i, format * 2);
+            int regIdx = (int)objectCode.at(2) - 48;
+            WriteToLst(outFile, currentMemoryAddress, subroutineName, mnemonic, registerTable.substr(regIdx, 1), objectCode);
         }
         else // Its format 3 or 4, continue accordingly
         {
             const int nixbpe = stoi(firstBits.substr(6, 6));
+            // cout << "nixbpe: " << firstBits.substr(6, 6) << endl;
+        
             string instructionFormat = CalculateTargetAddress(nixbpe, 0).first;
-            
-            // If format contains a '+' sign, set format to 4. Otherwise grab from opCodeTable via function
+            // cout << "instructionFormat: " << instructionFormat << endl;
+
+            // If format contains a '+' sign, set format to 4. Otherwise grab from opcodeTable via function
             format = instructionFormat.find('+') != string::npos ? 4 : GetMnemonic(firstBits.substr(0, 6)).second;
             PCRegister = currentMemoryAddress + format;
 
@@ -148,16 +221,22 @@ void DisAssembler::TextParser(string line)
             // If displacement is format 3 and in 2's complement, convert to its signed value (for TA calculation)
             dispOrAddr = ((format == 3 && 0x800 & dispOrAddr) ? (int)(0x7FF & dispOrAddr) - 0x800 : dispOrAddr);
             unsigned int targetAddress = CalculateTargetAddress(nixbpe, dispOrAddr).second;
-
             string operand = (symbolTable.find(targetAddress)) != symbolTable.end() ? symbolTable.at(targetAddress).first : "";
+            // cout << "operand= " <<  operand << endl;
             string opCode = line.substr(i, format * 2);
 
             if (subroutineName.find(opCode) != string::npos)
             {
-                WriteToLst("LTORG", "");
+                // cout << "debugk" << endl;
+                WriteToLst(outFile, "LTORG", "");
                 mnemonic = "*";
-                WriteToLst(currentMemoryAddress, "", "*", subroutineName, opCode);
-            } 
+                WriteToLst(outFile, currentMemoryAddress, "", "*", subroutineName, opCode);
+            } else if (instructionFormat.length() == 0) {
+                WriteToLst(outFile, "LTORG", "");
+                WriteToLst(outFile, currentMemoryAddress, "", "*", subroutineName, opCode.substr(0,2));
+                format = 1;
+            }
+
             else
             {
                 string srcStatement = instructionFormat.replace(instructionFormat.find("op"), 2, mnemonic);
@@ -167,12 +246,13 @@ void DisAssembler::TextParser(string line)
                 else if (instructionFormat.find('c') != string::npos)
                     srcStatement = instructionFormat.replace(instructionFormat.find("c"), 1, opCode.substr(5));
  
-                WriteToLst(currentMemoryAddress,
+                WriteToLst(outFile, currentMemoryAddress,
                     subroutineName, srcStatement.substr(0, srcStatement.find(" ")),
                     srcStatement.substr(srcStatement.find(" ")),
                     opCode);
             }
-            UpdateRegisters(mnemonic, dispOrAddr);
+            
+            UpdateRegisters(outFile, mnemonic, dispOrAddr);
         }
         currentMemoryAddress += format;
         mostRecentMemoryAddress = currentMemoryAddress;
@@ -186,10 +266,11 @@ void DisAssembler::TextParser(string line)
     @param  string representing the end record line
     @return 
 */
-void DisAssembler::EndParser(string line)
+void DisAssembler::EndParser(string line, ofstream &outFile)
 {
+
     int endingAddress = stoi(line, nullptr, 16);
-    WriteToLst("END", symbolTable.at(endingAddress).first);
+    WriteToLst(outFile, "END", symbolTable.at(endingAddress).first);
 }
 
 
@@ -200,9 +281,9 @@ void DisAssembler::EndParser(string line)
 */
 pair<string, int> DisAssembler::GetMnemonic(string binary)
 {
-    binary += "00";
+    binary.append("00");
     string opCode = BinaryToHex(binary);
-    return { opCodeTable.at(opCode).first, opCodeTable.at(opCode).second };
+    return { opcodeTable.at(opCode).first, opcodeTable.at(opCode).second };
 }
 
 
@@ -224,11 +305,13 @@ pair<string, unsigned int> DisAssembler::CalculateTargetAddress(const int flagBi
         case 110100:
             return { "op m", baseRegister + dispOrAddr };
         case 111000:
-            return { "op c, X", dispOrAddr + XRegister };
+            return { "op c,X", dispOrAddr + XRegister };
         case 111001:
-            return { "+op m, X", dispOrAddr + XRegister };
+            return { "+op m,X", dispOrAddr + XRegister };
         case 111010:
-            return { "op m, X", PCRegister + dispOrAddr + XRegister };
+            return { "op m,X", PCRegister + dispOrAddr + XRegister };
+        case 111100:
+            return { "op m,X", baseRegister + dispOrAddr + XRegister };
         case 100000:
             return { "op @c", dispOrAddr };
         case 100001:
@@ -257,7 +340,7 @@ pair<string, unsigned int> DisAssembler::CalculateTargetAddress(const int flagBi
     @param two ints representing the lower and upper memory range respectively
     @return 
 */
-void DisAssembler::MemoryAssignment(int rangeLower, int rangeUpper)
+void DisAssembler::MemoryAssignment(ofstream &outFile, int rangeLower, int rangeUpper)
 {
     vector<unsigned int> addressRanges;
     for (const auto& key : symbolTable)
@@ -271,24 +354,24 @@ void DisAssembler::MemoryAssignment(int rangeLower, int rangeUpper)
         int currentMemoryAddress = addressRanges[i];
         int currentRange = addressRanges[i + 1] - addressRanges[i];        
         string subroutineName = symbolTable.at(addressRanges[i]).first;
-        WriteToLst(currentMemoryAddress, subroutineName, "RESW", to_string(currentRange / 3), "");
+        WriteToLst(outFile, currentMemoryAddress, subroutineName, "RESW", to_string(currentRange / 3), "");
     }
     int currentMemoryAddress = addressRanges[addressRanges.size() - 1];
     int lastRange = rangeUpper - addressRanges[addressRanges.size()-1];
     string subroutineName = symbolTable.at(addressRanges[addressRanges.size() - 1]).first;
     if(lastRange != 0)
-        WriteToLst(currentMemoryAddress, subroutineName, "RESW", to_string(lastRange / 3), "");
+        WriteToLst(outFile, currentMemoryAddress, subroutineName, "RESW", to_string(lastRange / 3), "");
 
 }
 
 
-void DisAssembler::UpdateRegisters(string mnemonic, unsigned int value)
+void DisAssembler::UpdateRegisters(ofstream &outFile, string mnemonic, unsigned int value)
 {
     if (mnemonic == "LDB" && !baseRegisterActive)
     {
         baseRegisterActive = true;
         baseRegister = value;
-        WriteToLst("BASE", symbolTable.at(baseRegister).first);
+        WriteToLst(outFile, "BASE", symbolTable.at(baseRegister).first);
     }
     else if (mnemonic == "LDX")
     {
@@ -302,7 +385,7 @@ void DisAssembler::UpdateRegisters(string mnemonic, unsigned int value)
     @param hexadecimal number to convert.
     @return the hexadecimal number converted to decimal
 */
-long DisAssembler::HexToDecimal(string hex)
+long DisAssembler::HexString2Decimal(string hex)
 {
     return stol(hex, nullptr, 16);
 }
@@ -313,13 +396,13 @@ long DisAssembler::HexToDecimal(string hex)
     @param hexadecimal number to convert.
     @return the hexadecimal number converted to binary
 */
-string DisAssembler::HexToBinary(string hex)
+string DisAssembler::HexString2BinaryString(string hex)
 {
     string binary = "";
     for (const auto& character : hex)
     {
         int index = hexDigits.find(character);
-        binary += binaryNums[index];
+        binary.append(binaryNums[index]);
     }
     return binary;
 }
@@ -342,14 +425,66 @@ string DisAssembler::BinaryToHex(string binary)
 }
 
 
-void DisAssembler::WriteToLst(int address, string subroutineName, string mnemonic, string forwardRef, string opcode)
+void DisAssembler::WriteToLst(ofstream &outFile, int address, string subroutineName, string mnemonic, string forwardRef, string objectCode)
 {
-    cout << uppercase << hex << setfill('0') << setw(4) << address << setfill(' ') << setw(10) << subroutineName << setw(10) << mnemonic << setw(13) << forwardRef << setw(10) << opcode << endl;
+    const std::string WHITESPACE = " \n\r\t\f\v";
+    size_t start = forwardRef.find_first_not_of(WHITESPACE);
+    forwardRef =  (start == std::string::npos) ? "" : forwardRef.substr(start);
+    // regex r("^\\s+");
+    // forwardRef = regex_replace(forwardRef, r, "");
+
+    int subroutineNameLen = 10;
+    int mnemonicLen = 8;
+    int forwardRefLen = 16;
+    
+    if(subroutineName.length() == 0){
+        subroutineName = " ";
+    }
+    if(mnemonic.length() == 0){
+        mnemonic = " ";
+    }
+
+    if(mnemonic.at(0) == '+'){
+        subroutineNameLen --;
+        mnemonicLen++;
+    }
+   
+    if (forwardRef.at(0) == '#' || forwardRef.at(0) == '@'){
+        forwardRefLen++;
+        mnemonicLen--;
+    }
+
+    // cout << uppercase << hex << right << setfill('0') << setw(4) << address << left
+    //      << setfill(' ') << setw(4) << " " 
+    //      << setfill(' ') << setw(subroutineNameLen) << left << subroutineName
+    //      << setfill(' ') << setw(mnemonicLen) << mnemonic
+    //      << setfill(' ') << setw(forwardRefLen) << forwardRef
+    //      << objectCode
+    //      << endl;
+
+    outFile << uppercase << hex << right << setfill('0') << setw(4) << address << left
+         << setfill(' ') << setw(4) << " " 
+         << setfill(' ') << setw(subroutineNameLen) << left << subroutineName
+         << setfill(' ') << setw(mnemonicLen) << mnemonic
+         << setfill(' ') << setw(forwardRefLen) << forwardRef
+         << objectCode
+         << endl;
 }
 
 
-void DisAssembler::WriteToLst(string mnemonic, string forwardRef)
+void DisAssembler::WriteToLst(ofstream &outFile, string mnemonic, string forwardRef)
 {
-    cout << setw(24) << mnemonic << setw(13) << forwardRef << endl;
+    const std::string WHITESPACE = " \n\r\t\f\v";
+    size_t start = forwardRef.find_first_not_of(WHITESPACE);
+    forwardRef =  (start == std::string::npos) ? "" : forwardRef.substr(start);
+    // regex r("^\\s+");
+    // forwardRef = regex_replace(forwardRef, r, "");
+    // cout << setfill(' ') << setw(18) << " "  
+    //         << left << setw(8) << mnemonic 
+    //         << setw(16) << forwardRef << endl;
+
+    outFile << setfill(' ') << setw(18) << " "  
+            << left << setw(8) << mnemonic 
+            << setw(16) << forwardRef << endl;
 }
 

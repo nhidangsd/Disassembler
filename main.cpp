@@ -2,26 +2,38 @@
     CS-530 Assignment 1: Disassembler
     @file checks.cpp
     @authors Luka Jozic & Nhi Dang
-    @version 1.1 3/10/21
+    @version 1.2 3/28/21
 */
 
 #include <iostream>
+#include <iomanip>
 #include "disassembler.h"
 
-
+#include "test.h"
 using namespace std;
 
 int main(int argc, char** argv) 
 {
     if(argc != 3)
     {
-        cout << "Not enough args. Please provide the name of the 2 files.";
+        cout << "Not enough args. Please provide the name of the 2 files." << endl;
         return 1;
     }
-
+    // Declare an instance of DisAssembler
     DisAssembler* dasm = new DisAssembler;
-    dasm->ReadFiles(*(argv + 1));
+
+    // Load object code to DisAssembler for processing
+    dasm->ReadinObjectCode(argv[1]);
+
+    // Init value for DisAssembler 's symbol table
+    dasm->ReadinSymbolTable(argv[2]);
+
     dasm->Parser();
- 
+
+    // Testing areas:
+    // print_objLines(dasm->objLines);
+    // print_symbolTab(dasm->symbolTable);
+    // compare2Files("answer.lst", "out.lst");
+
     return 0;
 }

@@ -2,8 +2,11 @@
 #include <string>
 #include <map>
 #include <algorithm>
-
-using namespace std;
+#include <iostream>
+#include <fstream>
+#include <sstream>
+#include <iomanip>
+#include <regex>
 
 #define BIN_LIST_SIZE 16
 
@@ -13,32 +16,45 @@ public:
     DisAssembler();
     ~DisAssembler();
 
-    
-    void ReadFiles(char* objFile);
+    /**
+        Reads the object code file into vector objLines for processing
+        @param  char ptr representing the commanline arguments
+        @return void
+    */
+    void ReadinObjectCode(char* fileName);
+
+    /**
+        Reads the symbol table file into a map symbolTable for look up data
+        @param  char ptr representing the commanline arguments
+        @return void
+    */
+    void ReadinSymbolTable(char* fileName);
     void Parser();
+    std::vector<std::string> objLines;
+    std::map < unsigned int, std::pair<std::string, std::string> > symbolTable;
     
 
 private:
-    void HeaderParser(string line);
-    void TextParser(string line);
-    void EndParser(string line);
+    void HeaderParser(std::string line, std::ofstream &outFile);
+    void TextParser(std::string line, std::ofstream &outFile);
+    void EndParser(std::string line, std::ofstream &outFile);
 
-    pair<string, int> GetMnemonic(string binary);
-    pair<string, unsigned int> CalculateTargetAddress(const int flagBits, unsigned int dispOrAddr);
+    std::pair<std::string, int> GetMnemonic(std::string binary);
+    std::pair<std::string, unsigned int> CalculateTargetAddress(const int flagBits, unsigned int dispOrAddr);
 
-    void MemoryAssignment(int rangeLower, int rangeUpper);
-    void UpdateRegisters(string mnemonic, unsigned int value);
+    void MemoryAssignment(std::ofstream &outFile, int rangeLower, int rangeUpper);
+    void UpdateRegisters(std::ofstream &outFile, std::string mnemonic, unsigned int value);
 
-    long HexToDecimal(string hex);
-    string HexToBinary(string hex);
-    string BinaryToHex(string binary);
+    long HexString2Decimal(std::string hex);
+    std::string HexString2BinaryString(std::string hex);
+    std::string BinaryToHex(std::string binary);
     
-    void WriteToLst(int address, string subroutineName, string mnemonic, string forwardRef, string opcode);
-    void WriteToLst(string mnemonic, string forwardRef);
+    void WriteToLst(std::ofstream &outFile, int address, std::string subroutineName, std::string mnemonic, std::string forwardRef, std::string objectCode);
+    void WriteToLst(std::ofstream &outFile, std::string mnemonic, std::string forwardRef);
 
 private:
-    vector<string> objLines;
-    vector<string> symLines;
+    // std::vector<std::string> objLines;
+    // std::map < unsigned int, std::pair<std::string, std::string> > symbolTable;
 
 
     bool baseRegisterActive = false;
@@ -50,9 +66,9 @@ private:
 
     unsigned int mostRecentMemoryAddress;
     
-    const string registerTable = "AXLBSTF";
+    const std::string registerTable = "AXLBSTF";
 
-    map<string, pair<string, int>> opCodeTable = {
+    std::map <std::string, std::pair<std::string, int> > opcodeTable = {
         {"18", {"ADD", 3}},  {"58", {"ADDF", 3}},   {"90", {"ADDR", 2}},   {"40", {"AND", 3}},  {"B4", {"CLEAR", 2}},
         {"28", {"COMP", 3}}, {"88", {"COMPF", 3}},  {"A0", {"COMPR", 2}},  {"24", {"DIV", 3}},  {"64", {"DIVF", 3}},
         {"9C", {"DIVR", 2}}, {"C4", {"FIX", 1}},    {"C0", {"FLOAT", 1}},  {"F4", {"HIO", 1}},  {"3C", {"J", 3}},
@@ -68,7 +84,7 @@ private:
     };
 
 
-    map<string, pair<string, string>> addressingModeTable = {
+    std::map <std::string, std::pair<std::string, std::string> > addressingModeTable = {
         {"110000", { "op c", "disp" }},
         {"110001", { "+op m", "addr" }},
         {"110010", { "op m", "(PC) + disp" }},
@@ -79,30 +95,29 @@ private:
         {"100000", { "op @c", "disp" }},
         {"100001", { "+op @m", "addr" }},
         {"100010", { "op @m", "(PC) + disp" }},
-        {"100100", { "op @m", "(B) + disp" }},
         {"010000", { "op #c", "disp" }},
         {"010001", { "+op #m", "addr" }},
         {"010010", { "op #m", "(PC) + disp" }},
-        {"010100", { "op #m", "(B) + disp" }}
+        {"010100", { "op #m", "(B) + disp" }},
     };
     
 
-    map<unsigned int, pair<string, string>> symbolTable = {
-        {0x0, { "FIRST", "R" }},
-        {0xA, { "BADR", "R" }},
-        {0x83E, { "RETADR", "R" }},
-        {0x849, { "WLOOP", "R" }},
-        {0x85C, { "EADR", "R" }},
+    // map<unsigned int, pair<string, string>> symbolTable = {
+    //     {0x0, { "FIRST", "R" }},
+    //     {0xA, { "BADR", "R" }},
+    //     {0x83E, { "RETADR", "R" }},
+    //     {0x849, { "WLOOP", "R" }},
+    //     {0x85C, { "EADR", "R" }},
 
-        {0x855, { "=X'000001'", "6" }},
-        {0x1090, { "=X'000007'", "6" }}
-    };
+    //     {0x855, { "=X'000001'", "6" }},
+    //     {0x1090, { "=X'000007'", "6" }}
+    // };
 
 
 
-    const string binaryNums[BIN_LIST_SIZE] = { "0000", "0001", "0010", "0011", "0100", "0101","0110", "0111", "1000", "1001", "1010",
+    const std::string binaryNums[BIN_LIST_SIZE] = { "0000", "0001", "0010", "0011", "0100", "0101","0110", "0111", "1000", "1001", "1010",
                                "1011", "1100", "1101", "1110","1111" };
-    const string hexDigits = "0123456789ABCDEF";
+    const std::string hexDigits = "0123456789ABCDEF";
 
 
 };

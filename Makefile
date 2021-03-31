@@ -1,6 +1,11 @@
+CC=g++
 
-main: main.cpp
-	g++ -o dissem main.cpp
+CFLAGS= -std=c++11
 
-clean: 
-	rm -f *.o ${PROGRAM}
+all: dissem
+
+dissem: main.cpp disassembler.cpp test.cpp
+	$(CC) $(CFLAGS) main.cpp disassembler.cpp test.cpp -o dissem
+
+clean:
+	$(RM) *.o out.lst dissem
