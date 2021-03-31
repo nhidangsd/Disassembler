@@ -1,7 +1,4 @@
-*.lst
 *.txt
 *.o
 .dist
 .vscode
-*.obj
-*.sym
