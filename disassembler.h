@@ -7,43 +7,22 @@
 #include <sstream>
 #include <iomanip>
 #include <regex>
+#include <algorithm>
 
 #define BIN_LIST_SIZE 16
 
 class DisAssembler 
 {
-public:
-    DisAssembler();
-    ~DisAssembler();
-
-    /**
-        Reads the object code file into vector objLines for processing
-        @param  char ptr representing the commanline arguments
-        @return void
-    */
-    void ReadinObjectCode(char* fileName);
-
-    /**
-        Reads the symbol table file into a map symbolTable for look up data
-        @param  char ptr representing the commanline arguments
-        @return void
-    */
-    void ReadinSymbolTable(char* fileName);
-    void Parser();
-    std::vector<std::string> objLines;
-    std::map < unsigned int, std::pair<std::string, std::string> > symbolTable;
-    
 
 private:
     void HeaderParser(std::string line, std::ofstream &outFile);
     void TextParser(std::string line, std::ofstream &outFile);
     void EndParser(std::string line, std::ofstream &outFile);
+    void MemoryAssignment(std::ofstream &outFile, int rangeLower, int rangeUpper);
+    void UpdateRegisters(std::ofstream &outFile, std::string mnemonic, unsigned int value);
 
     std::pair<std::string, int> GetMnemonic(std::string binary);
     std::pair<std::string, unsigned int> CalculateTargetAddress(const int flagBits, unsigned int dispOrAddr);
-
-    void MemoryAssignment(std::ofstream &outFile, int rangeLower, int rangeUpper);
-    void UpdateRegisters(std::ofstream &outFile, std::string mnemonic, unsigned int value);
 
     long HexString2Decimal(std::string hex);
     std::string HexString2BinaryString(std::string hex);
@@ -56,16 +35,11 @@ private:
     // std::vector<std::string> objLines;
     // std::map < unsigned int, std::pair<std::string, std::string> > symbolTable;
 
-    unsigned int fullRecordLength;
     bool baseRegisterActive = false;
     bool XRegisterFlag = false;
-    unsigned int baseRegister;
-    unsigned int PCRegister;
-    unsigned int XRegister;
-    unsigned int ARegister;
-    unsigned int counter = 0;
+    unsigned int baseRegister, PCRegister, XRegister, ARegister, fullRecordLength, mostRecentMemoryAddress, counter = 0;
 
-    unsigned int mostRecentMemoryAddress;
+    // unsigned int mostRecentMemoryAddress;
     
     const std::string registerTable = "AXLBSTF";
 
@@ -101,26 +75,39 @@ private:
         {"010010", { "op #m", "(PC) + disp" }},
         {"010100", { "op #m", "(B) + disp" }},
     };
-    
 
-    // map<unsigned int, pair<string, string>> symbolTable = {
-    //     {0x0, { "FIRST", "R" }},
-    //     {0xA, { "BADR", "R" }},
-    //     {0x83E, { "RETADR", "R" }},
-    //     {0x849, { "WLOOP", "R" }},
-    //     {0x85C, { "EADR", "R" }},
-
-    //     {0x855, { "=X'000001'", "6" }},
-    //     {0x1090, { "=X'000007'", "6" }}
-    // };
-
-
-
-    const std::string binaryNums[BIN_LIST_SIZE] = { "0000", "0001", "0010", "0011", "0100", "0101","0110", "0111", "1000", "1001", "1010",
-                               "1011", "1100", "1101", "1110","1111" };
     const std::string hexDigits = "0123456789ABCDEF";
+    const std::string binaryNums[BIN_LIST_SIZE] = { "0000", "0001", "0010", "0011", "0100", 
+                                                    "0101", "0110", "0111", "1000", "1001", 
+                                                    "1010", "1011", "1100", "1101", "1110","1111" };
 
+public:
+    DisAssembler();
+    ~DisAssembler();
 
+    /**
+        Reads the object code file into vector objLines for processing
+        @param  char ptr representing the commanline arguments
+        @return void
+    */
+    void ReadinObjectCode(char* fileName);
+
+    /**
+        Reads the symbol table file into a map symbolTable for look up data
+        @param  char ptr representing the commanline arguments
+        @return void
+    */
+    void ReadinSymbolTable(char* fileName);
+
+    /**
+        Reads the symbol table file into a map symbolTable for look up data
+        @param  char ptr representing the commanline arguments
+        @return void
+    */
+    void Parser();
+    std::vector<std::string> objLines;
+    std::map < unsigned int, std::pair<std::string, std::string> > symbolTable;
+    
 };
 
 

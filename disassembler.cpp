@@ -1,7 +1,13 @@
-#include "disassembler.h"
-#include <algorithm>
+/**
+    CS-530 Assignment 1: Disassembler
+    @file disassembler.cpp
+    @authors Luka Jozic & Nhi Dang
+    @version 2.1 3/28/21
+*/
 
+#include "disassembler.h"
 using namespace std;
+
 
 DisAssembler::DisAssembler()
 {
@@ -195,7 +201,7 @@ void DisAssembler::TextParser(string line, ofstream &outFile)
         string opcode = firstBits.substr(0, 6);
         // cout << "debug : opcode= "  << opcode << endl;
         string mnemonic = GetMnemonic(opcode).first;
-        // cout << "debug : mnemonic= "  << mnemonic << endl;
+        // cout << "debug : mnemonic = "  << mnemonic << endl;
         // Check if format is 2, if it is grab the remaining two bits and write to file
         if (GetMnemonic(opcode).second == 2)
         {
@@ -241,16 +247,21 @@ void DisAssembler::TextParser(string line, ofstream &outFile)
 
             else
             {
+                // cout << "HRLLO RSUB" << endl;
                 string srcStatement = instructionFormat.replace(instructionFormat.find("op"), 2, mnemonic);
                 if (instructionFormat.find('m') != string::npos)
                     srcStatement = instructionFormat.replace(instructionFormat.find("m"), 1, operand);
  
-                else if (instructionFormat.find('c') != string::npos)
+                else if ( (instructionFormat.find('c') != string::npos) ){
                     srcStatement = instructionFormat.replace(instructionFormat.find("c"), 1, opCode.substr(5));
- 
+                }
+                string forwardRef = srcStatement.substr(srcStatement.find(" "));
+                if ( !mnemonic.compare("RSUB")){
+                    forwardRef = "";
+                }
                 WriteToLst(outFile, currentMemoryAddress,
                     subroutineName, srcStatement.substr(0, srcStatement.find(" ")),
-                    srcStatement.substr(srcStatement.find(" ")),
+                    forwardRef,
                     opCode);
             }
             
@@ -456,6 +467,9 @@ void DisAssembler::WriteToLst(ofstream &outFile, int address, string subroutineN
     if(mnemonic.length() == 0){
         mnemonic = " ";
     }
+    if(forwardRef.length() == 0){
+        forwardRef = " ";
+    }
 
     if(mnemonic.at(0) == '+'){
         subroutineNameLen --;
@@ -467,13 +481,13 @@ void DisAssembler::WriteToLst(ofstream &outFile, int address, string subroutineN
         mnemonicLen--;
     }
 
-     cout << uppercase << hex << right << setfill('0') << setw(4) << address << left
-          << setfill(' ') << setw(4) << " " 
-          << setfill(' ') << setw(subroutineNameLen) << left << subroutineName
-          << setfill(' ') << setw(mnemonicLen) << mnemonic
-          << setfill(' ') << setw(forwardRefLen) << forwardRef
-          << objectCode
-          << endl;
+    //  cout << uppercase << hex << right << setfill('0') << setw(4) << address << left
+    //       << setfill(' ') << setw(4) << " " 
+    //       << setfill(' ') << setw(subroutineNameLen) << left << subroutineName
+    //       << setfill(' ') << setw(mnemonicLen) << mnemonic
+    //       << setfill(' ') << setw(forwardRefLen) << forwardRef
+    //       << objectCode
+    //       << endl;
 
     outFile << uppercase << hex << right << setfill('0') << setw(4) << address << left
          << setfill(' ') << setw(4) << " " 

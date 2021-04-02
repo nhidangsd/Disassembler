@@ -1,8 +1,8 @@
 /**
     CS-530 Assignment 1: Disassembler
-    @file checks.cpp
+    @file main.cpp
     @authors Luka Jozic & Nhi Dang
-    @version 1.2 3/28/21
+    @version 2.1 3/28/21
 */
 
 #include <iostream>
@@ -33,7 +33,7 @@ int main(int argc, char** argv)
     // Testing areas:
     // print_objLines(dasm->objLines);
     // print_symbolTab(dasm->symbolTable);
-    // compare2Files("answer.lst", "out.lst");
+    compare2Files("answer1.lst", "out.lst");
 
     return 0;
 }

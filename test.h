@@ -3,6 +3,7 @@
 #include <map>
 #include <iomanip>
 #include <fstream>
+#include <iostream>
 
 
 void print_symbolTab(std::map < unsigned int, std::pair<std::string, std::string> > symTab);

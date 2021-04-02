@@ -1,9 +1,21 @@
-#include <iostream>
-#include "test.h"
+/**
+    CS-530 Assignment 1: Disassembler
+    @file test.cpp
+    @authors Luka Jozic & Nhi Dang
+    @version 2.1 3/28/21
+*/
 
+
+#include "test.h"
 using namespace std;
 
 
+/**
+    Encodes a single digit of a POSTNET "A" bar code.
+    @param digit the single digit to encode.
+    @return a bar code of the digit using "|" as the long bar
+    and "," as the half bar.
+*/
 void print_symbolTab(map < unsigned int, pair<string, string> > symTab){
 
     cout << "PRINT SYMBOL TABLE MAP" << endl;
@@ -69,9 +81,10 @@ void compare2Files(string fileNameA, string fileNameB){
     while (getline(fileA, lineA) && getline(fileB, lineB))
     {
         const std::string WHITESPACE = " \n\r\t\f\v";
-        size_t end = lineB.find_last_not_of(WHITESPACE);
-        lineB = (end == std::string::npos) ? "" : lineB.substr(0, end + 1);
-
+        size_t endA = lineA.find_last_not_of(WHITESPACE);
+        size_t endB = lineB.find_last_not_of(WHITESPACE);
+        lineA = (endA == std::string::npos) ? "" : lineA.substr(0, endA + 1);
+        lineB = (endB == std::string::npos) ? "" : lineB.substr(0, endB + 1);
         if (lineA.compare(lineB) != 0 || ( lineA.length() != lineB.length() ))
         {
             cout << "TEST FAILED: compare2Files" << endl;
