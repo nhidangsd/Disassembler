@@ -136,8 +136,7 @@ private:
 
 
 /**
-    & 
-    stores result(s) into the output file
+    Updates the base and registers & stores result(s) into the output file
     @param outFile The output file containing the result Assembly Code after the translation 
     @param mnemonic A string containing the mnemonic name
     @param value An integer containing the upper bound of memory address
