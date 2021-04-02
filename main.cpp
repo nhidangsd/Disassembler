@@ -8,6 +8,7 @@
 #include <iostream>
 #include <iomanip>
 #include "disassembler.h"
+#include "test.h"
 using namespace std;
 
 int main(int argc, char** argv) 
@@ -31,6 +32,8 @@ int main(int argc, char** argv)
 
     // Translate Object Code program to Assembly Code program
     dasm->ObjectCode2AssemblyCode();
+
+    compare2Files("answer1.lst", "out.lst");
 
     return 0;
 }

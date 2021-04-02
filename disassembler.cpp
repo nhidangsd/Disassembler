@@ -165,7 +165,7 @@ void DisAssembler::HeaderParser  ( ofstream &outFile, string line )
     string headerName = line.substr(0, idx);
     int startingAddress = stoi(line.substr(6, 6), nullptr, 16);
     fullRecordLength = stoi(line.substr(12, 6), nullptr, 16);
-    WriteToLst(outFile, startingAddress, headerName, "", "START   0", "");
+    GenerateAssemblyInstruction(outFile, startingAddress, headerName, "", "START   0", "");
 }
 
 
@@ -210,7 +210,7 @@ void DisAssembler::TextParser  ( ofstream &outFile, string line )
             format = 2;
             string objectCode = line.substr(i, format * 2);
             int regIdx = (int)objectCode.at(2) - 48;
-            WriteToLst(outFile, currentMemoryAddress, subroutineName, mnemonic, registerTable.substr(regIdx, 1), objectCode);
+            GenerateAssemblyInstruction(outFile, currentMemoryAddress, subroutineName, mnemonic, registerTable.substr(regIdx, 1), objectCode);
         }
         else // Its format 3 or 4, continue accordingly
         {
@@ -238,18 +238,18 @@ void DisAssembler::TextParser  ( ofstream &outFile, string line )
             if (subroutineName.find(opCode) != string::npos)
             {
                 // cout << "debugk" << endl;
-                WriteToLst(outFile, "LTORG", "");
+                GenerateAssemblyInstruction(outFile, "LTORG", "");
                 mnemonic = "*";
-                WriteToLst(outFile, currentMemoryAddress, "", "*", subroutineName, opCode);
+                GenerateAssemblyInstruction(outFile, currentMemoryAddress, "", "*", subroutineName, opCode);
             } else if (instructionFormat.length() == 0) {
-                WriteToLst(outFile, "LTORG", "");
-                WriteToLst(outFile, currentMemoryAddress, "", "*", subroutineName, opCode.substr(0,2));
+                GenerateAssemblyInstruction(outFile, "LTORG", "");
+                GenerateAssemblyInstruction(outFile, currentMemoryAddress, "", "*", subroutineName, opCode.substr(0,2));
                 format = 1;
             }
 
             else
             {
-                // cout << "HRLLO RSUB" << endl;
+
                 string srcStatement = instructionFormat.replace(instructionFormat.find("op"), 2, mnemonic);
                 if (instructionFormat.find('m') != string::npos)
                     srcStatement = instructionFormat.replace(instructionFormat.find("m"), 1, operand);
@@ -261,7 +261,7 @@ void DisAssembler::TextParser  ( ofstream &outFile, string line )
                 if ( !mnemonic.compare("RSUB")){
                     forwardRef = "";
                 }
-                WriteToLst(outFile, currentMemoryAddress,
+                GenerateAssemblyInstruction(outFile, currentMemoryAddress,
                     subroutineName, srcStatement.substr(0, srcStatement.find(" ")),
                     forwardRef,
                     opCode);
@@ -294,8 +294,8 @@ void DisAssembler::TextParser  ( ofstream &outFile, string line )
 */
 void DisAssembler::EndParser ( ofstream &outFile, string line )
 {
-    int endingAddress = stoi(line, nullptr, 16);
-    WriteToLst(outFile, "END", symbolTable.at(endingAddress).first);
+    int endingAddress = stoi(line, nullptr, 6);
+    GenerateAssemblyInstruction(outFile, "END", symbolTable.at(endingAddress).first);
 }
 
 
@@ -323,13 +323,13 @@ void DisAssembler::MemoryAssignment(ofstream &outFile, int rangeLower, int range
         int currentMemoryAddress = addressRanges[i];
         int currentRange = addressRanges[i + 1] - addressRanges[i];        
         string subroutineName = symbolTable.at(addressRanges[i]).first;
-        WriteToLst(outFile, currentMemoryAddress, subroutineName, "RESW", to_string(currentRange / 3), "");
+        GenerateAssemblyInstruction(outFile, currentMemoryAddress, subroutineName, "RESW", to_string(currentRange / 3), "");
     }
     int currentMemoryAddress = addressRanges[addressRanges.size() - 1];
     int lastRange = rangeUpper - addressRanges[addressRanges.size()-1];
     string subroutineName = symbolTable.at(addressRanges[addressRanges.size() - 1]).first;
     if(lastRange != 0)
-        WriteToLst(outFile, currentMemoryAddress, subroutineName, "RESW", to_string(lastRange / 3), "");
+        GenerateAssemblyInstruction(outFile, currentMemoryAddress, subroutineName, "RESW", to_string(lastRange / 3), "");
 
 }
 
@@ -348,7 +348,7 @@ void DisAssembler::UpdateRegisters(ofstream &outFile, string mnemonic, unsigned 
     {
         baseRegisterActive = true;
         baseRegister = value;
-        WriteToLst(outFile, "BASE", symbolTable.at(baseRegister).first);
+        GenerateAssemblyInstruction(outFile, "BASE", symbolTable.at(baseRegister).first);
     }
     else if (mnemonic == "LDX")
     {
@@ -473,7 +473,7 @@ string DisAssembler::BinaryToHex(string binary)
     @param objectCode A string representing an object code
     @return void
 */
-void DisAssembler::WriteToLst(ofstream &outFile, int address, string subroutineName, string mnemonic, string forwardRef, string objectCode)
+void DisAssembler::GenerateAssemblyInstruction(ofstream &outFile, int address, string subroutineName, string mnemonic, string forwardRef, string objectCode)
 {
     const std::string WHITESPACE = " \n\r\t\f\v";
     size_t start = forwardRef.find_first_not_of(WHITESPACE);
@@ -530,7 +530,7 @@ void DisAssembler::WriteToLst(ofstream &outFile, int address, string subroutineN
     @param forwardRef A string representing a forward reference 
     @return void
 */
-void DisAssembler::WriteToLst(ofstream &outFile, string mnemonic, string forwardRef)
+void DisAssembler::GenerateAssemblyInstruction(ofstream &outFile, string mnemonic, string forwardRef)
 {
     const std::string WHITESPACE = " \n\r\t\f\v";
     size_t start = forwardRef.find_first_not_of(WHITESPACE);

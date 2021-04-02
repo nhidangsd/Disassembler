@@ -196,7 +196,7 @@ private:
     @param objectCode A string representing an object code
     @return void
 */
-    void WriteToLst(std::ofstream &outFile, int address, std::string subroutineName, std::string mnemonic, std::string forwardRef, std::string objectCode);
+    void GenerateAssemblyInstruction(std::ofstream &outFile, int address, std::string subroutineName, std::string mnemonic, std::string forwardRef, std::string objectCode);
 
 
 /**
@@ -206,7 +206,7 @@ private:
     @param forwardRef A string representing a forward reference 
     @return void
 */
-    void WriteToLst(std::ofstream &outFile, std::string mnemonic, std::string forwardRef);
+    void GenerateAssemblyInstruction(std::ofstream &outFile, std::string mnemonic, std::string forwardRef);
 
 
 };
