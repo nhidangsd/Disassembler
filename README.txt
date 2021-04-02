@@ -104,15 +104,13 @@ ALGORITHM EXPLAINATION
             - instructionFormat <- lookup instruction format by using CalculateTargetAddress with 
             nixbpe as the key
             - format <- 4 if instructionFormat containing '+', else 3
-            - PCRegister <- currentMemoryAddress + format
-            - disOrAddr <- grab the address if format 4, else grab the displacement
-            - Convert dispOrAddr into signed number if it's in 2's complement form
-            - targetAddress <- lookup the instructionFormat using the nixbpe bits
-            - operand <- lookup operand using symbolTable with targetAddress as the key
+            - Assign correct data to operand, set base or (X) value as necessary depending on the format type
 
-
-
-
+        + i += format * 2
+        + currentMemoryAddress += format
+        + mostRecentMemoryAddress <- currentMemoryAddress;
+        + Check if there is memory gap at the end of the text record,
+        if so: call MemoryAssignment() function
 
 
 
@@ -123,7 +121,3 @@ ALGORITHM EXPLAINATION
     to generate Assembly Code instruction
 
 
-        
-
-
- 
