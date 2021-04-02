@@ -187,8 +187,6 @@ void DisAssembler::TextParser  ( ofstream &outFile, string line )
     // Col 6-8 is the length of object code in bytes (hexidecimal)
     long recordLength = HexString2Decimal(line.substr(6, 2));
 
-    
-
     // Start processing the object code
     for (int i = 8; i < recordLength * 2 + 8; )
     {
