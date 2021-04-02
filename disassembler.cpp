@@ -9,6 +9,7 @@
 using namespace std;
 
 
+// Constructor
 DisAssembler::DisAssembler()
 {
     baseRegister = 0x0;
@@ -17,14 +18,15 @@ DisAssembler::DisAssembler()
     ARegister = 0x0;
 }
 
+// Destructor
 DisAssembler::~DisAssembler()
 {
 }
 
 
 /**
-    Reads the object code file into vector objLines for processing
-    @param  char ptr representing the commanline arguments
+    Reads the object code file and stores it in a vector called "objLines" for processing
+    @param fileName A character ptr containing the name of the file to open
     @return void
 */
 void DisAssembler::ReadinObjectCode(char* fileName)
@@ -48,8 +50,8 @@ void DisAssembler::ReadinObjectCode(char* fileName)
 
 
 /**
-    Reads the symbol table file into a map symbolTable for look up data
-    @param  char ptr representing the commanline arguments
+    Reads the symbol table file iand stores it in a map called "symbolTable" for lookup purpose
+    @param filName A character ptr containing the name of the file to open
     @return void
 */
 void DisAssembler::ReadinSymbolTable(char* fileName)
@@ -114,11 +116,10 @@ void DisAssembler::ReadinSymbolTable(char* fileName)
 
 
 /**
-    Loops over the object lines and uses helper functions to parse each line
-    @param 
-    @return 
+    Perform the translation from Object Code program into Assembly Launguage program
+    @return void
 */
-void DisAssembler::Parser()
+void DisAssembler::ObjectCode2AssemblyCode()
 {
     ofstream outFile ("out.lst");
 
@@ -133,13 +134,13 @@ void DisAssembler::Parser()
         switch (firstChar)
         {
             case 'H':
-                HeaderParser(line.substr(1), outFile);
+                HeaderParser (outFile, line.substr(1));
                 break;
             case 'T':
-                TextParser(line.substr(1), outFile);
+                TextParser (outFile, line.substr(1));
                 break;
             case 'E':
-                EndParser(line.substr(1), outFile);
+                EndParser (outFile, line.substr(1));
                 break;
             default:
                 break;
@@ -152,11 +153,12 @@ void DisAssembler::Parser()
 
 
 /**
-    Parses a single header record line and writes it to output file
-    @param  string representing the header record line
-    @return
+    Translates a Header Record into corresponding an Assembly Code instruction
+    @param outFile The output file containing the result Assembly Code after the translation
+    @param line A string containing the Header Record 
+    @return void
 */
-void DisAssembler::HeaderParser(string line, ofstream &outFile)
+void DisAssembler::HeaderParser  ( ofstream &outFile, string line )
 {
     // Find the index of the first number, that is where the header name ends
     int idx = std::distance(line.begin(), std::find_if(line.begin(), line.end(), [](const char c) { return std::isdigit(c); }));
@@ -168,12 +170,12 @@ void DisAssembler::HeaderParser(string line, ofstream &outFile)
 
 
 /**
-    Parses a single text record line. Initializes for loop to partwise parse the string and with helper functions
-    extract the wanted information and store it in relevant variables. Finally write the result to output file
-    @param  string representing the text record line
-    @return
+    Translates a Text Record into corresponding an Assembly Code instruction
+    @param outFile The output file containing the result Assembly Code after the translation 
+    @param line A string containing the Text Record
+    @return void
 */
-void DisAssembler::TextParser(string line, ofstream &outFile)
+void DisAssembler::TextParser  ( ofstream &outFile, string line )
 {
 
     // Col 0-6 is the STARTING ADDRESS for object code (hexidecimal)
@@ -285,11 +287,12 @@ void DisAssembler::TextParser(string line, ofstream &outFile)
 
 
 /**
-    Parses a single end record line and writes it to output file
-    @param  string representing the end record line
-    @return 
+    Translates an End Record into corresponding an Assembly Code instruction
+    @param outFile The output file containing the result Assembly Code after the translation
+    @param line A string containing the End Record 
+    @return void
 */
-void DisAssembler::EndParser(string line, ofstream &outFile)
+void DisAssembler::EndParser ( ofstream &outFile, string line )
 {
     int endingAddress = stoi(line, nullptr, 16);
     WriteToLst(outFile, "END", symbolTable.at(endingAddress).first);
@@ -297,22 +300,81 @@ void DisAssembler::EndParser(string line, ofstream &outFile)
 
 
 /**
-    Appends two 0's to the binary opcode and returns the mnemonic and its corresponding format
-    @param  string representing the first 6 bits of the opcode
-    @return a pair, the menmonic as a string and the format as int, respectively
+    Generates Assembly Code instruction(s) if there is any needed memory assignment & 
+    stores result(s) into the output file
+    @param outFile The output file containing the result Assembly Code after the translation 
+    @param lower An integer containing the lower bound of memory address
+    @param upper An integer containing the upper bound of memory address
+    @return void
+*/
+void DisAssembler::MemoryAssignment(ofstream &outFile, int rangeLower, int rangeUpper)
+{
+    vector<unsigned int> addressRanges;
+    for (const auto& key : symbolTable)
+    {
+        if (key.first >= rangeLower && key.first <= rangeUpper)
+        {
+            addressRanges.push_back(key.first);     
+        }
+    }
+
+    for (int i = 0; i < addressRanges.size() - 1; i++)
+    {
+        int currentMemoryAddress = addressRanges[i];
+        int currentRange = addressRanges[i + 1] - addressRanges[i];        
+        string subroutineName = symbolTable.at(addressRanges[i]).first;
+        WriteToLst(outFile, currentMemoryAddress, subroutineName, "RESW", to_string(currentRange / 3), "");
+    }
+    int currentMemoryAddress = addressRanges[addressRanges.size() - 1];
+    int lastRange = rangeUpper - addressRanges[addressRanges.size()-1];
+    string subroutineName = symbolTable.at(addressRanges[addressRanges.size() - 1]).first;
+    if(lastRange != 0)
+        WriteToLst(outFile, currentMemoryAddress, subroutineName, "RESW", to_string(lastRange / 3), "");
+
+}
+
+
+/**
+    & 
+    stores result(s) into the output file
+    @param outFile The output file containing the result Assembly Code after the translation 
+    @param mnemonic A string containing the mnemonic name
+    @param value An integer containing the upper bound of memory address
+    @return void
+*/
+void DisAssembler::UpdateRegisters(ofstream &outFile, string mnemonic, unsigned int value)
+{
+    if (mnemonic == "LDB" && !baseRegisterActive)
+    {
+        baseRegisterActive = true;
+        baseRegister = value;
+        WriteToLst(outFile, "BASE", symbolTable.at(baseRegister).first);
+    }
+    else if (mnemonic == "LDX")
+    {
+        XRegister = value;
+    }
+}
+
+
+/**
+    Looks up mnemonic information using the opcode as the key
+    @param binary A string containing the opcode in a binary number format. Its length should be 6
+    @return A pair<string, int> containing the mnemonic name and the format type
 */
 pair<string, int> DisAssembler::GetMnemonic(string binary)
 {
-    binary.append("00");
+    binary.append("00"); // Appends two 0's to the binary opcode string
     string opCode = BinaryToHex(binary);
     return { opcodeTable.at(opCode).first, opcodeTable.at(opCode).second };
 }
 
 
 /**
-    Calculates the current target address
-    @param takes in the nixbpe flagBits and a unsigned int representing the displacement or address depending on format
-    @return a pair, assembly language notation as string and TA as unsigned int, respectively
+    Looks up the instruction format based the nixbpe flagBits
+    @param flagBits A const integer containing nixbpe flagBits
+    @param disOrAddr An unsigned integer containing the displacement or address depending on format
+    @return a pair<string, unsigned int> containing the instruction format and the target address, respectively
 */
 pair<string, unsigned int> DisAssembler::CalculateTargetAddress(const int flagBits, unsigned int dispOrAddr)
 {
@@ -357,57 +419,9 @@ pair<string, unsigned int> DisAssembler::CalculateTargetAddress(const int flagBi
 
 
 /**
-    Assigns memory within the gap range by iterating over the symbolTable and seeing which values are in the given range
-    then calculates the proper memory assignment and the corresponding subroutine Name
-    @param two ints representing the lower and upper memory range respectively
-    @return 
-*/
-void DisAssembler::MemoryAssignment(ofstream &outFile, int rangeLower, int rangeUpper)
-{
-    vector<unsigned int> addressRanges;
-    for (const auto& key : symbolTable)
-    {
-        if (key.first >= rangeLower && key.first <= rangeUpper)
-        {
-            addressRanges.push_back(key.first);     
-        }
-    }
-
-    for (int i = 0; i < addressRanges.size() - 1; i++)
-    {
-        int currentMemoryAddress = addressRanges[i];
-        int currentRange = addressRanges[i + 1] - addressRanges[i];        
-        string subroutineName = symbolTable.at(addressRanges[i]).first;
-        WriteToLst(outFile, currentMemoryAddress, subroutineName, "RESW", to_string(currentRange / 3), "");
-    }
-    int currentMemoryAddress = addressRanges[addressRanges.size() - 1];
-    int lastRange = rangeUpper - addressRanges[addressRanges.size()-1];
-    string subroutineName = symbolTable.at(addressRanges[addressRanges.size() - 1]).first;
-    if(lastRange != 0)
-        WriteToLst(outFile, currentMemoryAddress, subroutineName, "RESW", to_string(lastRange / 3), "");
-
-}
-
-
-void DisAssembler::UpdateRegisters(ofstream &outFile, string mnemonic, unsigned int value)
-{
-    if (mnemonic == "LDB" && !baseRegisterActive)
-    {
-        baseRegisterActive = true;
-        baseRegister = value;
-        WriteToLst(outFile, "BASE", symbolTable.at(baseRegister).first);
-    }
-    else if (mnemonic == "LDX")
-    {
-        XRegister = value;
-    }
-}
-
-
-/**
-    Converts a hexadecimal number to decimal number.
-    @param hexadecimal number to convert.
-    @return the hexadecimal number converted to decimal
+    Converts a string representing a hexidecimal number (Base 16) to a decimal number (Base 10)
+    @param hex A string representing a hexidecimal number (Base 16)
+    @return A long integer in decimal number (Base 10)
 */
 long DisAssembler::HexString2Decimal(string hex)
 {
@@ -416,9 +430,9 @@ long DisAssembler::HexString2Decimal(string hex)
 
 
 /**
-    Converts a hexadecimal number to binary number.
-    @param hexadecimal number to convert.
-    @return the hexadecimal number converted to binary
+    Converts a string representing a hexidecimal number (Base 16) to a string representing a binary number (Base 2)
+    @param hex A string representing a hexidecimal number (Base 16)
+    @return A string representing a binary number (Base 2)
 */
 string DisAssembler::HexString2BinaryString(string hex)
 {
@@ -433,9 +447,9 @@ string DisAssembler::HexString2BinaryString(string hex)
 
 
 /**
-    Converts a binary number to hexadecimal number.
-    @param binary number to convert.
-    @return the binary number converted to hexadecimal
+    Converts a string representing a binary number (Base 2) to a string representing a hexidecimal number (Base 16)
+    @param binary A string representing a binary number (Base 2)
+    @return A string representing a hexidecimal number (Base 16)
 */
 string DisAssembler::BinaryToHex(string binary)
 {
@@ -449,6 +463,16 @@ string DisAssembler::BinaryToHex(string binary)
 }
 
 
+/**
+    Produces Assembly Code instruction to the output file in an appropriate format
+    @param outFile The output file containing the result Assembly Code after the translation
+    @param address An integer representing a memory address 
+    @param subroutineName A string containing a subroutine name
+    @param mnemonic A string containing a mnemonic name
+    @param forwardRef A string representing a forward reference 
+    @param objectCode A string representing an object code
+    @return void
+*/
 void DisAssembler::WriteToLst(ofstream &outFile, int address, string subroutineName, string mnemonic, string forwardRef, string objectCode)
 {
     const std::string WHITESPACE = " \n\r\t\f\v";
@@ -499,6 +523,13 @@ void DisAssembler::WriteToLst(ofstream &outFile, int address, string subroutineN
 }
 
 
+/**
+    Produces Assembly Code instruction to the output file in an appropriate format
+    @param outFile The output file containing the result Assembly Code after the translation
+    @param mnemonic A string containing a mnemonic name
+    @param forwardRef A string representing a forward reference 
+    @return void
+*/
 void DisAssembler::WriteToLst(ofstream &outFile, string mnemonic, string forwardRef)
 {
     const std::string WHITESPACE = " \n\r\t\f\v";

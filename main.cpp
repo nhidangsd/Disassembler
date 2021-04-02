@@ -8,32 +8,29 @@
 #include <iostream>
 #include <iomanip>
 #include "disassembler.h"
-
-#include "test.h"
 using namespace std;
 
 int main(int argc, char** argv) 
 {
+
+    // Check if there are enough arguments provided from terminal
     if(argc != 3)
     {
         cout << "Not enough args. Please provide the name of the 2 files." << endl;
         return 1;
     }
+    
     // Declare an instance of DisAssembler
     DisAssembler* dasm = new DisAssembler;
 
-    // Load object code to DisAssembler for processing
+    // Load object code file to DisAssembler for processing
     dasm->ReadinObjectCode(argv[1]);
 
-    // Init value for DisAssembler 's symbol table
+    // Init value for DisAssembler's symbol table
     dasm->ReadinSymbolTable(argv[2]);
 
-    dasm->Parser();
-
-    // Testing areas:
-    // print_objLines(dasm->objLines);
-    // print_symbolTab(dasm->symbolTable);
-    compare2Files("answer1.lst", "out.lst");
+    // Translate Object Code program to Assembly Code program
+    dasm->ObjectCode2AssemblyCode();
 
     return 0;
 }
