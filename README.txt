@@ -68,14 +68,52 @@ ALGORITHM EXPLAINATION
 
  * Algorithm for Header Parser:
 
-    - Set program name <- the first 6 characters
-    - Set starting address of object program <- the next 6 characters
-    - Set the length of object program <- the next 6 characters
+    - Program name <- the first 6 characters
+    - Starting address of object program <- the next 6 characters
+    - The length of object program <- the next 6 characters
     - Pass these variable into a function GenerateAssemblyInstruction() 
     to generate Assembly Code instruction
 
 
- * Algorithm for Text Parser:
+ * Algorithm for Text Parser: (Exclude format 1)
+
+    - Declare a var named "format" to store the format type of the current machine instruction
+    - currentMemoryAddress <- the first 6 characters
+    - recordLength <- the next 2 characters
+    - Loop through each character in the given string record, starting from index 8
+    For i=8 to n = recordLength*2 + 8:
+
+        + Check if there is a memory gap, if so:
+            call MemoryAssignment() function
+        + Extract the first 3 characters representing a hexidecimal number
+            & convert into binary number form 
+            & store it into a variable called "firstBits"
+        + The first 6 digits of "firstBits" will be the opcode
+        + mnemonic <- lookup mnemonic name using the opcode
+        + subroutineName <- lookup subroutineName using the currentMemoryAddress
+
+        + If the instruction is format 2:
+            - format <- 2
+            - Extract the objectCode base on the format type
+            - Look up the register name
+            - Pass these variable into a function GenerateAssemblyInstruction() 
+            to generate Assembly Code instruction
+
+        + Else:
+            - Extract nixbpe bits <- the last half of "firstBits" (6 digits)
+            - instructionFormat <- lookup instruction format by using CalculateTargetAddress with 
+            nixbpe as the key
+            - format <- 4 if instructionFormat containing '+', else 3
+            - PCRegister <- currentMemoryAddress + format
+            - disOrAddr <- grab the address if format 4, else grab the displacement
+            - Convert dispOrAddr into signed number if it's in 2's complement form
+            - targetAddress <- lookup the instructionFormat using the nixbpe bits
+            - operand <- lookup operand using symbolTable with targetAddress as the key
+
+
+
+
+
 
 
  * Algorithm for End Parser:

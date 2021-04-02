@@ -178,32 +178,30 @@ void DisAssembler::HeaderParser  ( ofstream &outFile, string line )
 void DisAssembler::TextParser  ( ofstream &outFile, string line )
 {
 
+    int format; // store the format type of the current machine instruction
+
     // Col 0-6 is the STARTING ADDRESS for object code (hexidecimal)
     // we only need the last 4 digits in the 6digits starting addr
     unsigned int currentMemoryAddress = stoi(line.substr(2, 4), nullptr, 16);
 
     // Col 6-8 is the length of object code in bytes (hexidecimal)
     long recordLength = HexString2Decimal(line.substr(6, 2));
-    int format;
+
     
 
     // Start processing the object code
     for (int i = 8; i < recordLength * 2 + 8; )
     {
         if (currentMemoryAddress - mostRecentMemoryAddress > 4)
+        {
             MemoryAssignment(outFile, mostRecentMemoryAddress, currentMemoryAddress);
+        }
 
-
-        string subroutineName = (symbolTable.find(currentMemoryAddress) != symbolTable.end()) ? symbolTable.at(currentMemoryAddress).first : "";
         string firstBits = HexString2BinaryString(line.substr(i, 3)); 
-        // cout << "debug : i = "  << i << endl;
-        // cout << "debug : subroutineName= "  << subroutineName << endl;
-        // cout << "debug : line= "  << line.substr(i, 3)<< endl;
-        // cout << "debug : firstBits= "  << firstBits << endl;
         string opcode = firstBits.substr(0, 6);
-        // cout << "debug : opcode= "  << opcode << endl;
         string mnemonic = GetMnemonic(opcode).first;
-        // cout << "debug : mnemonic = "  << mnemonic << endl;
+        string subroutineName = (symbolTable.find(currentMemoryAddress) != symbolTable.end()) ? symbolTable.at(currentMemoryAddress).first : "";
+
         // Check if format is 2, if it is grab the remaining two bits and write to file
         if (GetMnemonic(opcode).second == 2)
         {
@@ -215,10 +213,8 @@ void DisAssembler::TextParser  ( ofstream &outFile, string line )
         else // Its format 3 or 4, continue accordingly
         {
             const int nixbpe = stoi(firstBits.substr(6, 6));
-            // cout << "nixbpe: " << firstBits.substr(6, 6) << endl;
         
             string instructionFormat = CalculateTargetAddress(nixbpe, 0).first;
-            // cout << "instructionFormat: " << instructionFormat << endl;
 
             // If format contains a '+' sign, set format to 4. Otherwise grab from opcodeTable via function
             format = instructionFormat.find('+') != string::npos ? 4 : GetMnemonic(firstBits.substr(0, 6)).second;
@@ -230,41 +226,37 @@ void DisAssembler::TextParser  ( ofstream &outFile, string line )
   
             // If displacement is format 3 and in 2's complement, convert to its signed value (for TA calculation)
             dispOrAddr = ((format == 3 && 0x800 & dispOrAddr) ? (int)(0x7FF & dispOrAddr) - 0x800 : dispOrAddr);
+
             unsigned int targetAddress = CalculateTargetAddress(nixbpe, dispOrAddr).second;
             string operand = (symbolTable.find(targetAddress)) != symbolTable.end() ? symbolTable.at(targetAddress).first : "";
-            // cout << "operand= " <<  operand << endl;
-            string opCode = line.substr(i, format * 2);
+            string objectCode = line.substr(i, format * 2);
 
-            if (subroutineName.find(opCode) != string::npos)
+            if (subroutineName.find(objectCode) != string::npos)
             {
-                // cout << "debugk" << endl;
                 GenerateAssemblyInstruction(outFile, "LTORG", "");
                 mnemonic = "*";
-                GenerateAssemblyInstruction(outFile, currentMemoryAddress, "", "*", subroutineName, opCode);
+                GenerateAssemblyInstruction(outFile, currentMemoryAddress, "", "*", subroutineName, objectCode);
             } else if (instructionFormat.length() == 0) {
                 GenerateAssemblyInstruction(outFile, "LTORG", "");
-                GenerateAssemblyInstruction(outFile, currentMemoryAddress, "", "*", subroutineName, opCode.substr(0,2));
+                GenerateAssemblyInstruction(outFile, currentMemoryAddress, "", "*", subroutineName, objectCode.substr(0,2));
                 format = 1;
             }
 
             else
             {
-
                 string srcStatement = instructionFormat.replace(instructionFormat.find("op"), 2, mnemonic);
                 if (instructionFormat.find('m') != string::npos)
                     srcStatement = instructionFormat.replace(instructionFormat.find("m"), 1, operand);
  
                 else if ( (instructionFormat.find('c') != string::npos) ){
-                    srcStatement = instructionFormat.replace(instructionFormat.find("c"), 1, opCode.substr(5));
+                    srcStatement = instructionFormat.replace(instructionFormat.find("c"), 1, objectCode.substr(5));
                 }
                 string forwardRef = srcStatement.substr(srcStatement.find(" "));
                 if ( !mnemonic.compare("RSUB")){
                     forwardRef = "";
                 }
                 GenerateAssemblyInstruction(outFile, currentMemoryAddress,
-                    subroutineName, srcStatement.substr(0, srcStatement.find(" ")),
-                    forwardRef,
-                    opCode);
+                    subroutineName, srcStatement.substr(0, srcStatement.find(" ")), forwardRef, objectCode);
             }
             
             UpdateRegisters(outFile, mnemonic, dispOrAddr);
@@ -478,8 +470,6 @@ void DisAssembler::GenerateAssemblyInstruction(ofstream &outFile, int address, s
     const std::string WHITESPACE = " \n\r\t\f\v";
     size_t start = forwardRef.find_first_not_of(WHITESPACE);
     forwardRef =  (start == std::string::npos) ? "" : forwardRef.substr(start);
-    // regex r("^\\s+");
-    // forwardRef = regex_replace(forwardRef, r, "");
 
     int subroutineNameLen = 10;
     int mnemonicLen = 8;
@@ -505,14 +495,6 @@ void DisAssembler::GenerateAssemblyInstruction(ofstream &outFile, int address, s
         mnemonicLen--;
     }
 
-    //  cout << uppercase << hex << right << setfill('0') << setw(4) << address << left
-    //       << setfill(' ') << setw(4) << " " 
-    //       << setfill(' ') << setw(subroutineNameLen) << left << subroutineName
-    //       << setfill(' ') << setw(mnemonicLen) << mnemonic
-    //       << setfill(' ') << setw(forwardRefLen) << forwardRef
-    //       << objectCode
-    //       << endl;
-
     outFile << uppercase << hex << right << setfill('0') << setw(4) << address << left
          << setfill(' ') << setw(4) << " " 
          << setfill(' ') << setw(subroutineNameLen) << left << subroutineName
@@ -535,11 +517,6 @@ void DisAssembler::GenerateAssemblyInstruction(ofstream &outFile, string mnemoni
     const std::string WHITESPACE = " \n\r\t\f\v";
     size_t start = forwardRef.find_first_not_of(WHITESPACE);
     forwardRef =  (start == std::string::npos) ? "" : forwardRef.substr(start);
-    // regex r("^\\s+");
-    // forwardRef = regex_replace(forwardRef, r, "");
-    // cout << setfill(' ') << setw(18) << " "  
-    //         << left << setw(8) << mnemonic 
-    //         << setw(16) << forwardRef << endl;
 
     outFile << setfill(' ') << setw(18) << " "  
             << left << setw(8) << mnemonic 
